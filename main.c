@@ -1,7 +1,13 @@
 #include <xc.h>
 #include "blade.h"
 #include "setup.h"
+#include "spi.h"
 #include "mcc_generated_files/usb/usb.h"
+
+#include "canlib/canlib.h"
+#include "canlib/mcp2515/mcp_2515.h"
+
+uint8_t tx_pool[500];
 
 int main(void) {
     setup();
@@ -54,8 +60,37 @@ int main(void) {
     OC1CON2bits.OCTRIG = 0;     // Select OC1 as sync source???
     OC1CON1bits.OCM = 0b110; // Edge-aligned PWM
     
-    uint16_t res;
+    spi_init();
+    can_timing_t can_setup;
+    can_generate_timing_params(12000000, &can_setup);
+    mcp_can_init(&can_setup, spi_read, spi_write, cs_drive);
+    txb_init(tx_pool, sizeof(tx_pool), mcp_can_send, mcp_can_send_rdy);
+    TRISEbits.TRISE8 = 1; // INT
+    
+    can_msg_t msg_send, msg_rcv;
+    msg_send.data[0] = 0xAA;
+    msg_send.data[1] = 0xCC;
+    msg_send.sid = 0x7ef;
+    msg_send.data_len = 2;
+    
+    uint32_t res;
     while (1) {
+//        for(uint16_t i = 0; i < 600; i++);
+        res++;
+        if (res > 600000) {
+            res = 0;
+            txb_enqueue(&msg_send);
+            msg_send.data[0]++;
+        }
+        
+        if (!PORTEbits.RE8) {
+            can_msg_t rcv;
+            if (mcp_can_receive(&rcv)) {
+                rcv.sid += 1;
+                txb_enqueue(&rcv);
+            }
+        }
+        
 //        ADSTATLbits.SL0IF = 0;
 //        ADL0CONLbits.SAMP = 0;
 //        while (!ADSTATLbits.SL0IF);
@@ -67,6 +102,7 @@ int main(void) {
 //        if (OC1R > 200) {
 //            OC1R = 0;
 //        }
+        txb_heartbeat();
     }
 
     return 0;

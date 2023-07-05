@@ -77,9 +77,6 @@ void CLOCK_Initialize(void)
 }
 
 void setup() {
-    // CS / LED
-    TRISEbits.TRISE4 = 0;
-    
     TRISGbits.TRISG2 = 1;
     TRISGbits.TRISG3 = 1;
     

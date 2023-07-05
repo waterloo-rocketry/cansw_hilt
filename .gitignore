@@ -7,6 +7,8 @@
 *.o
 *.sdb
 *.obj.dmp
+defmplabxtrace.log
+defmplabxtrace.log.inx
 html/
 nbproject/private/
 nbproject/Package-*.bash
@@ -14,6 +16,7 @@ build/
 nbbuild/
 dist/
 nbdist/
+debug/
 nbactions.xml
 nb-configuration.xml
 funclist
