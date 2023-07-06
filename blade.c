@@ -100,6 +100,7 @@ bool get_port(uint8_t pin_n) {
 }
 
 void set_pps_out(uint8_t pps_n, uint8_t id) {
+    if (pps_n == 0xFF) return; // Invalid
     pps_out_t pps = pps_outputs[pps_n >> 1];
     uint16_t mask = 0xFF << ((~pps_n & 1) * 8);
     uint16_t set  = id   << (( pps_n & 1) * 8);

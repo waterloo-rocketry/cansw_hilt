@@ -4,32 +4,31 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct port {
-    uint16_t *tris;
-    uint16_t *lat;
-    uint16_t *port;
-    uint16_t *ansel;
+typedef struct {
+    volatile uint16_t *tris;
+    volatile uint16_t *lat;
+    volatile uint16_t *port;
+    volatile uint16_t *ansel;
 } port_t;
 
-typedef struct pps_out {
-    uint16_t *rpor;
+typedef struct {
+    volatile uint16_t *rpor;
 } pps_out_t;
 
-typedef struct pin {
+typedef struct {
     uint8_t pin_n;
     uint8_t an_n;
     uint8_t pps_n;
 } pin_t;
 
-struct slot {
+typedef struct {
     pin_t pps1;
     pin_t pps2;
     pin_t an1;
     pin_t an2;
     pin_t d1;
     pin_t d2;
-};
-typedef struct slot slot_t;
+} slot_t;
 
 extern const slot_t slots[10];
 
