@@ -12,12 +12,13 @@ uint8_t tx_pool[500];
 uint8_t rx_pool[500];
 
 void can_init(void) {
+    for (uint16_t i = 0; i < 60000; i++); // wait a bit to let the MCP start up
     can_timing_t can_setup;
     can_generate_timing_params(12000000, &can_setup);
     mcp_can_init(&can_setup, spi_read, spi_write, cs_drive);
     txb_init(tx_pool, sizeof(tx_pool), mcp_can_send, mcp_can_send_rdy);
     rcvb_init(rx_pool, sizeof(rx_pool));
-    
+
     TRISEbits.TRISE8 = 1; // INT pin
 }
 
@@ -26,6 +27,7 @@ void can_heartbeat(void) {
     if (!PORTEbits.RE8) { // Interrupt signal from MCP2515
         can_msg_t rcv;
         if (mcp_can_receive(&rcv)) {
+            // Put messages into the rcvb for the USB handler to send to the host
             rcvb_push_message(&rcv);
         }
     }

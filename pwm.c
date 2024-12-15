@@ -21,16 +21,9 @@ void pwm_init() {
         *module.r = 0; // duty cycle
         *module.rs = 100; // period
         *module.con1 = 0x1C00; // Use peripherical clock (16 MHz)
-        *module.con2 = 0x001F; // Set ourselves as sync source
+        *module.con2 = 0x101F; // Set ourselves as sync source
         *module.con1 |= 0b111; // Center-aligned PWM
     }
-//    
-//    OC1R = 0; // duty cycle
-//    OC1RS = 100; // period
-//    OC1CON1bits.OCTSEL = 0b111; // Peripherial clock, 16 MHz
-//    OC1CON2bits.SYNCSEL = 0x1F; // Select ourselves as sync source
-//    OC1CON2bits.OCTRIG = 0; // Select ourselves as sync source
-//    OC1CON1bits.OCM = 0b110; // Enable edge-aligned PWM
 }
 
 void pwm_set(uint8_t channel, uint8_t value) {
@@ -38,7 +31,7 @@ void pwm_set(uint8_t channel, uint8_t value) {
     *module.r = value;
 }
 
-void pwm_assign(uint8_t channel, uint8_t pps_n) {
+void pwm_assign(uint8_t channel, pin_t pin) {
     oc_pwm_t module = pwm_modules[channel];
-    set_pps_out(pps_n, module.pps_id);
+    set_pps_out(pin, module.pps_id);
 }

@@ -3,6 +3,8 @@
 #include "adc.h"
 #include "pwm.h"
 #include "mcc_generated_files/usb/usb.h"
+#include "canlib/can_common.h"
+#include "canlib/util/can_tx_buffer.h"
 
 // Parse a two-digit pin of the form
 // 0d - blade 1, digital pin, channel a
@@ -39,12 +41,12 @@ void cmd_analog_read(uint8_t *data, uint8_t data_len) {
     if (data_len != 2) return;
     pin_t pin;
     if (!parse_pin(data, &pin)) return;
-    
-    set_pps_out(pin.pps_n, 0);
-    set_ansel(pin.pin_n, true);
-    set_tris(pin.pin_n, true);
-    uint16_t value = adc_sample(pin.an_n);
-    static char res[] = "A???????;";
+
+    set_pps_out(pin, 0);
+    set_ansel(pin, true);
+    set_tris(pin, true);
+    uint16_t value = adc_sample(pin);
+    static char res[] = "N???????;";
     res[1] = data[0];
     res[2] = data[1];
     for (uint8_t i = 0; i < 5; i++) {
@@ -63,23 +65,23 @@ void cmd_analog_write(uint8_t *data, uint8_t data_len) {
     if (data[4] < '0' || data[4] > '9') return; // Value LSB
     pin_t pin;
     if (!parse_pin(data, &pin)) return;
-    
+
     uint8_t channel = data[2] - '0';
     uint8_t value = (data[3] - '0') * 10 + (data[4] - '0');
     pwm_set(channel, value);
-    pwm_assign(channel, pin.pps_n);
+    pwm_assign(channel, pin);
 }
 
 void cmd_digital_read(uint8_t *data, uint8_t data_len) {
     if (data_len != 2) return;
     pin_t pin;
     if (!parse_pin(data, &pin)) return;
-    
-    set_pps_out(pin.pps_n, 0);
-    set_ansel(pin.pin_n, false);
-    set_tris(pin.pin_n, true);
-    bool value = get_port(pin.pin_n);
-    static char res[] = "D???;";
+
+    set_pps_out(pin, 0);
+    set_ansel(pin, false);
+    set_tris(pin, true);
+    bool value = get_port(pin);
+    static char res[] = "G???;";
     res[1] = data[0];
     res[2] = data[1];
     res[3] = value ? '1' : '0';
@@ -91,16 +93,55 @@ void cmd_digital_write(uint8_t *data, uint8_t data_len) {
     if (data[2] < '0' || data[2] > '1') return;
     pin_t pin;
     if (!parse_pin(data, &pin)) return;
-    
+
     bool value = data[2] == '1';
-    set_pps_out(pin.pps_n, 0);
-    set_lat(pin.pin_n, value);
-    set_tris(pin.pin_n, false);
+    set_pps_out(pin, 0);
+    set_lat(pin, value);
+    set_tris(pin, false);
+}
+
+uint8_t hex2num(char ch) {
+    if (ch >= '0' && ch <= '9')
+        return ch - '0';
+    if (ch >= 'A' && ch <= 'F')
+        return ch - 'A' + 10;
+    if (ch >= 'a' && ch <= 'f')
+        return ch - 'a' + 10;
+    return 255;
 }
 
 void cmd_send_can(uint8_t *data, uint8_t data_len) {
-    
+    if (data_len < 3) return;
+    if (data_len % 3 != 0) return;
+    for (uint8_t i = 0; i < data_len; i++) {
+        if (i == 0 || i % 3 != 0) {
+            if (hex2num(data[i]) == 255) return;
+        } else {
+            if (data[i] != ',') return;
+        }
+    }
+
+    can_msg_t msg = {0};
+    msg.sid  = ((uint16_t)hex2num(data[0])) << 8;
+    msg.sid |= hex2num(data[1]) << 4;
+    msg.sid |= hex2num(data[2]);
+
+    for (uint8_t i = 4; i < data_len; i += 3) {
+        msg.data[msg.data_len]  = hex2num(data[i]) << 4;
+        msg.data[msg.data_len] |= hex2num(data[i + 1]);
+        msg.data_len += 1;
+    }
+
+    txb_enqueue(&msg);
 }
+
+// Commands are made up of a single character to identify the command, some amount of data, and a
+// terminating semicolon. Responses (where applicable) take a similar format, and by convention
+// use an uppercase letter.
+
+// The data length specified is a maximum, not an exact value. This is useful for things like
+// sending CAN messages of variable length. It is up to the handler to verify an appropriate amount
+// of data is present.
 
 static command_t commands[5] = {
     {'a', 2, cmd_analog_read},
@@ -138,7 +179,7 @@ void commands_handle_character(char c) {
             parse_state = WAITING;
             break;
         }
-        if (data_buf_len > command.max_len) {
+        if (data_buf_len > command.max_len || data_buf_len >= sizeof(data_buf)) {
             parse_state = WAITING;
             break;
         }

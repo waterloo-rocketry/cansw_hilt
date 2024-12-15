@@ -18,6 +18,7 @@ void spi_init()
     SPI1CON1bits.CKE = 1;
     SPI1CON1bits.CKP = 0;
     SPI1CON1bits.MSTEN = 1;
+    SPI1CON1bits.PPRE = 0b10; // 4:1 prescale for 500 kHz
     SPI1STATbits.SPIROV = 0;
     SPI1STATbits.SPIEN = 1;
 }

@@ -1,8 +1,9 @@
 #ifndef COMMANDS_H
-#define	COMMANDS_H
+#define COMMANDS_H
 
 #include <stdint.h>
 
+// Describe a command with a name, a maximum data length, and a handler function
 typedef struct {
     char name;
     uint8_t max_len;

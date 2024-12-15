@@ -13,9 +13,9 @@ void adc_init() {
     ADL0CONHbits.SLINT = 1; // Interrupt after every sample
 }
 
-uint16_t adc_sample(uint8_t channel) {
-    if (channel == 0xFF) return -1; // Invalid
-    ADTBL0bits.ADCH = channel; // Set channel
+uint16_t adc_sample(pin_t pin) {
+    if (pin.an_n == 0xFF) return -1; // Invalid
+    ADTBL0bits.ADCH = pin.an_n; // Set channel
     ADL0CONLbits.SLEN = 1; // Enable sample list
     ADL0CONLbits.SAMP = 1; // Prepare to trigger
     ADSTATLbits.SL0IF = 0; // Clear interrupt flag
